@@ -1,0 +1,80 @@
+# Non-secret configuration. Secrets live in .env (see .env.example).
+# Everything here is versioned so runs are reproducible.
+
+seed: 42
+
+data:
+  root: ./data                # parquet snapshots + duckdb file live under here
+  duckdb_file: etf_intel.duckdb
+  start_date: "2010-01-01"    # ingestion history start
+  # end_date left null -> "today" at ingest time (recorded in snapshot metadata)
+
+universe_file: ./config/universe.yaml
+
+# Forward-return label horizons in trading days (~21 td/month).
+horizons:
+  fwd_1w: 5
+  fwd_1m: 21
+  fwd_3m: 63
+
+# Primary target the model optimises.
+target:
+  horizon: fwd_1m             # which horizon to model
+  kind: excess_vs_benchmark   # excess return over the benchmark (SPY)
+
+features:
+  return_windows: [5, 21, 63, 126, 252]
+  vol_windows: [21, 63]
+  ma_windows: [50, 200]
+  rsi_window: 14
+  macd: { fast: 12, slow: 26, signal: 9 }
+  drawdown_window: 252
+  rel_strength_window: 63     # relative strength vs benchmark
+  macro_release_lag_days:     # conservative publication lag per FRED series (Decision B)
+    DGS10: 1
+    DGS2: 1
+    T10Y2Y: 1
+    CPIAUCSL: 30
+    UNRATE: 15
+    FEDFUNDS: 5
+
+macro_series:                 # FRED series ids -> friendly names
+  DGS10: treasury_10y
+  DGS2: treasury_2y
+  T10Y2Y: yield_curve_10y2y
+  CPIAUCSL: cpi
+  UNRATE: unemployment
+  FEDFUNDS: fed_funds_rate
+
+model:
+  kind: lightgbm
+  params:
+    objective: regression
+    n_estimators: 300
+    learning_rate: 0.03
+    num_leaves: 31
+    max_depth: -1
+    min_child_samples: 20
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_lambda: 1.0
+    random_state: 42
+    n_jobs: 1
+    verbose: -1
+
+backtest:
+  rebalance: monthly          # rebalance frequency
+  train_min_days: 504         # ~2y minimum before first prediction
+  embargo_days: 21            # >= label horizon; purge+embargo (Decision D)
+  top_bucket_only: true       # equity curve = equal-weight top bucket long-only
+  retrain_every_months: 3     # predict monthly, retrain quarterly (walk-forward)
+
+# Cross-sectional rating buckets, from best predicted score to worst.
+# Fractions must sum to 1.0. Ordered best -> worst.
+ratings:
+  strong_buy: 0.10
+  buy: 0.20
+  hold: 0.40
+  reduce: 0.15
+  sell: 0.10
+  strong_sell: 0.05

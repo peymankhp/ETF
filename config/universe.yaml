@@ -1,0 +1,25 @@
+# MVP universe: 20 liquid US ETFs + benchmark.
+# Kept intentionally small and liquid for the walking skeleton.
+benchmark: SPY
+
+tickers:
+  - SPY   # S&P 500
+  - IVV   # S&P 500 (iShares)
+  - VOO   # S&P 500 (Vanguard)
+  - QQQ   # Nasdaq-100
+  - IWM   # Russell 2000 small-cap
+  - DIA   # Dow 30
+  - VTI   # Total US market
+  - EFA   # Developed ex-US
+  - EEM   # Emerging markets
+  - VEA   # Developed markets (Vanguard)
+  - AGG   # US aggregate bonds
+  - BND   # Total bond market
+  - TLT   # 20+yr Treasuries
+  - LQD   # Investment-grade corporates
+  - HYG   # High-yield corporates
+  - GLD   # Gold
+  - SLV   # Silver
+  - XLE   # Energy sector
+  - XLF   # Financials sector
+  - XLK   # Technology sector

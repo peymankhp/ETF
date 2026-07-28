@@ -1,0 +1,31 @@
+services:
+  etf-intel:
+    build: .
+    image: etf-intel:latest
+    env_file:
+      - .env
+    environment:
+      # Default to offline mode inside the container unless .env overrides.
+      ETF_INTEL_MARKET_SOURCE: ${ETF_INTEL_MARKET_SOURCE:-synthetic}
+      ETF_INTEL_MACRO_SOURCE: ${ETF_INTEL_MACRO_SOURCE:-synthetic}
+    volumes:
+      - ./data:/app/data
+    working_dir: /app
+
+  dashboard:
+    build: .
+    image: etf-intel:latest
+    command: streamlit run src/etf_intel/dashboard/app.py --server.address=0.0.0.0
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+
+  api:
+    build: .
+    image: etf-intel:latest
+    command: uvicorn etf_intel.api.app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data

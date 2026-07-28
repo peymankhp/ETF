@@ -1,0 +1,153 @@
+[project]
+name = "etf-intel"
+version = "0.1.0"
+description = "Institutional-quality, solo-maintainable AI ETF research platform (MVP)."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+authors = [{ name = "Peyman" }]
+
+# Pins are ranges; the committed uv.lock is the reproducibility source of truth.
+dependencies = [
+    "pandas~=2.2.3",
+    # Hard upper bound: lightgbm 4.7's native set_field crashes on numpy >= 2.2
+    # (access violation). ~=2.1 would allow 2.4, so pin the range explicitly.
+    "numpy>=2.1,<2.2",
+    "pyarrow~=17.0",
+    "duckdb~=1.1",
+    "pyyaml~=6.0",
+    "pydantic~=2.9",
+    "pydantic-settings~=2.5",
+    "python-dotenv~=1.0",
+    "scikit-learn~=1.5",
+    "lightgbm~=4.5",
+    "xgboost~=2.1",
+    "shap~=0.46",
+    # Floor numba so resolution picks a modern llvmlite with py311 wheels
+    # (otherwise shap->numba backtracks to llvmlite 0.36 which won't build).
+    "numba>=0.61",
+    "PyPortfolioOpt~=1.5.5",
+    "mlflow~=2.16",
+    "yfinance~=0.2.40",
+    "fredapi~=0.5.2",
+    "matplotlib~=3.9",
+    "fastapi~=0.115",
+    "uvicorn~=0.30",
+    "streamlit~=1.38",
+    "typer~=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest~=8.3",
+    "pytest-cov~=5.0",
+    "ruff~=0.6",
+    "mypy~=1.11",
+    "import-linter~=2.0",
+    "types-PyYAML~=6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/etf_intel"]
+
+# ---------------------------------------------------------------------------
+# Ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM", "D"]
+ignore = [
+    "D203",  # one-blank-line-before-class (conflicts with D211)
+    "D213",  # multi-line-summary-second-line (conflicts with D212)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]          # docstrings not required in tests
+"scripts/*" = ["D"]
+"notebooks/*" = ["D", "E501"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+# ---------------------------------------------------------------------------
+# mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+files = ["src", "scripts"]
+strict = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+plugins = ["pydantic.mypy"]
+# pandas/numpy are largely untyped here (no pandas-stubs): let values flow as Any
+# rather than drowning in false positives. Our own signatures stay fully typed.
+warn_return_any = false
+disallow_any_generics = false
+
+# Third-party libs without type stubs.
+[[tool.mypy.overrides]]
+module = [
+    "pandas",
+    "pandas.*",
+    "lightgbm.*",
+    "shap.*",
+    "yfinance.*",
+    "fredapi.*",
+    "sklearn.*",
+    "duckdb.*",
+    "matplotlib.*",
+    "streamlit.*",
+]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# pytest / coverage
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+pythonpath = ["src"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["etf_intel"]
+branch = true
+
+# ---------------------------------------------------------------------------
+# import-linter — architecture guardrails (fails CI on layering violations)
+# ---------------------------------------------------------------------------
+[tool.importlinter]
+root_package = "etf_intel"
+
+[[tool.importlinter.contracts]]
+name = "Layered architecture (dependencies point downward only)"
+type = "layers"
+layers = [
+    "etf_intel.reporting | etf_intel.api | etf_intel.dashboard",
+    "etf_intel.explain",
+    "etf_intel.backtest",
+    "etf_intel.portfolio | etf_intel.models",
+    "etf_intel.labeling | etf_intel.features",
+    "etf_intel.datastore",
+    "etf_intel.ingestion",
+    "etf_intel.common",
+]
+
+[[tool.importlinter.contracts]]
+name = "features must never import labeling (anti-leakage boundary)"
+type = "forbidden"
+source_modules = ["etf_intel.features"]
+forbidden_modules = ["etf_intel.labeling"]
