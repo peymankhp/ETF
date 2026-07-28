@@ -64,9 +64,17 @@ def main() -> None:
     buys = ranking.loc[ranking[Cols.RATING].isin(["Strong Buy", "Buy"]), Cols.TICKER].tolist()
     explanations = _explain(model, latest, buys)
 
+    provenance: dict[str, str] = {}
+    for key, rel in (
+        ("market_source", "raw/market.meta.json"),
+        ("macro_source", "raw/macro.meta.json"),
+    ):
+        if store.exists(rel):
+            provenance[key] = str(store.read_json(rel).get("source", "?"))
+
     from etf_intel.reporting import generate_markdown
 
-    md = generate_markdown(latest_date, ranking, metrics, explanations)
+    md = generate_markdown(latest_date, ranking, metrics, explanations, provenance)
     report_path = store.path(f"reports/weekly_{latest_date:%Y%m%d}.md")
     report_path.write_text(md, encoding="utf-8")
     store.write_parquet(ranking, Paths.LATEST_RANKING)

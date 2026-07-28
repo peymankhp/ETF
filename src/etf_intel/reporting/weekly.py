@@ -78,6 +78,35 @@ def _metrics_table(metrics: dict[str, Any]) -> str:
     return "\n".join(out)
 
 
+def _skill_table(skill: dict[str, Any]) -> str:
+    rows = [
+        ("Information coefficient (IC)", _fmt_num(skill.get("ic", float("nan")))),
+        ("Rank IC", _fmt_num(skill.get("rank_ic", float("nan")))),
+        ("Mean cross-sectional rank IC", _fmt_num(skill.get("mean_xs_rank_ic", float("nan")))),
+        ("AUC (outperform vs SPY)", _fmt_num(skill.get("auc", float("nan")))),
+    ]
+    out = ["| Skill metric (out-of-sample) | Value |", "|:-----------------------------|------:|"]
+    out += [f"| {name} | {val} |" for name, val in rows]
+    out.append("")
+    out.append("_IC/rank-IC near 0 ≈ no edge; AUC near 0.5 ≈ coin flip. Higher is better._")
+    return "\n".join(out)
+
+
+def _provenance_banner(provenance: dict[str, str] | None) -> str:
+    if not provenance:
+        return ""
+    market = provenance.get("market_source", "?")
+    macro = provenance.get("macro_source", "?")
+    lines = [f"**Data provenance:** market = `{market}`, macro = `{macro}`."]
+    synthetic = [name for name, src in (("market", market), ("macro", macro)) if src == "synthetic"]
+    if synthetic:
+        lines.append(
+            f"> ⚠️ **{' and '.join(synthetic)} data is SYNTHETIC** — the metrics below are a "
+            "mechanics demo, NOT a real trading signal."
+        )
+    return "\n".join(lines)
+
+
 def _drivers_section(explanations: dict[str, list[tuple[str, float]]]) -> str:
     lines = ["## Why — top SHAP drivers", ""]
     for ticker, drivers in explanations.items():
@@ -91,6 +120,7 @@ def generate_markdown(
     ranking: pd.DataFrame,
     metrics: dict[str, Any],
     explanations: dict[str, list[tuple[str, float]]] | None = None,
+    provenance: dict[str, str] | None = None,
 ) -> str:
     """Render the weekly report as a markdown string.
 
@@ -99,15 +129,22 @@ def generate_markdown(
         ranking: Latest scored+rated frame, sorted by rank.
         metrics: Backtest metrics dict from ``compute_backtest``.
         explanations: Optional ticker -> SHAP drivers for the top names.
+        provenance: Optional ``{market_source, macro_source}`` for the data banner.
 
     Returns:
         The full markdown document.
     """
     top_buys = ranking[ranking[Cols.RATING].isin(["Strong Buy", "Buy"])]
+    banner = _provenance_banner(provenance)
     sections = [
         f"# ETF Intel — Weekly Report ({as_of:%Y-%m-%d})",
         "",
         DISCLAIMER,
+        "",
+        *([banner, ""] if banner else []),
+        "## Predictive skill (out-of-sample)",
+        "",
+        _skill_table(metrics.get("skill", {})),
         "",
         "## Backtest performance (walk-forward)",
         "",

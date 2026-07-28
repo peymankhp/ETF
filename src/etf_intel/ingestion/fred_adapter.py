@@ -47,7 +47,7 @@ class FredMacroProvider(MacroDataProvider):
                 observation_start=str(start),
                 observation_end=None if end is None else str(end),
             )
-            df = series.rename("value").reset_index(names="date")
+            df = series.rename("value").rename_axis("date").reset_index()
             df["date"] = pd.to_datetime(df["date"]).dt.normalize()
             df["series_id"] = sid
             frames.append(df[["date", "series_id", "value"]])

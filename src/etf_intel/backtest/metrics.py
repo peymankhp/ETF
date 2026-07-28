@@ -15,8 +15,43 @@ import pandas as pd
 from etf_intel.backtest.walkforward import REALIZED_FWD
 from etf_intel.common.config import AppConfig, Universe
 from etf_intel.common.types import Cols, Rating
+from etf_intel.labeling import TARGET_COL
+from etf_intel.models.metrics import (
+    auc,
+    information_coefficient,
+    rank_information_coefficient,
+)
 
 PERIODS_PER_YEAR = 12  # monthly rebalance
+
+
+def _skill_metrics(predictions: pd.DataFrame) -> dict[str, float]:
+    """Out-of-sample predictive-skill metrics (the honest read of the model).
+
+    Args:
+        predictions: Scored walk-forward predictions with ``score``, ``target``
+            (realised excess return), and ``prob_outperform``.
+
+    Returns:
+        Dict with information coefficient, rank IC, mean per-date cross-sectional
+        rank IC, and outperformance AUC.
+    """
+    valid = predictions.dropna(subset=[TARGET_COL, Cols.SCORE])
+    if valid.empty:
+        return {k: float("nan") for k in ("ic", "rank_ic", "mean_xs_rank_ic", "auc")}
+
+    xs_ics: list[float] = []
+    for _, g in valid.groupby(Cols.DATE):
+        if len(g) >= 3 and g[Cols.SCORE].nunique() > 1 and g[TARGET_COL].nunique() > 1:
+            xs_ics.append(float(np.corrcoef(g[Cols.SCORE].rank(), g[TARGET_COL].rank())[0, 1]))
+
+    binary = (valid[TARGET_COL] > 0).astype(float)
+    return {
+        "ic": information_coefficient(valid[TARGET_COL], valid[Cols.SCORE]),
+        "rank_ic": rank_information_coefficient(valid[TARGET_COL], valid[Cols.SCORE]),
+        "mean_xs_rank_ic": float(np.mean(xs_ics)) if xs_ics else float("nan"),
+        "auc": auc(binary, valid[Cols.PROB_OUTPERFORM]),
+    }
 
 
 def perf_stats(returns: pd.Series, periods_per_year: int = PERIODS_PER_YEAR) -> dict[str, float]:
@@ -113,5 +148,6 @@ def compute_backtest(
         "strategy": strat,
         "benchmark": bench,
         "excess_hit_rate": float(np.mean(excess > 0)) if len(excess) else float("nan"),
+        "skill": _skill_metrics(predictions),
     }
     return metrics, equity
