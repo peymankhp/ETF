@@ -13,6 +13,7 @@ from etf_intel.common.config import AppConfig, Universe
 from etf_intel.common.prices import total_return_index
 from etf_intel.common.types import Cols
 from etf_intel.features.cross_sectional import cross_sectional_rank, relative_strength
+from etf_intel.features.fundamentals import trailing_dividend_yield
 from etf_intel.features.macro import build_macro_features
 from etf_intel.features.technical import compute_technical, rolling_return
 
@@ -51,6 +52,8 @@ def build_features(
         bars = bars.reset_index(drop=True)
         idx = total_return_index(bars)
         tech = compute_technical(idx, fcfg)
+        # Point-in-time fundamental: trailing dividend yield (past divs / price).
+        tech["ttm_yield"] = trailing_dividend_yield(bars, fcfg.yield_window).to_numpy()
         tech.insert(0, Cols.ADJ_CLOSE, idx.to_numpy())
         tech.insert(0, Cols.TICKER, ticker)
         tech.insert(0, Cols.DATE, bars[Cols.DATE].to_numpy())
