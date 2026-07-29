@@ -64,6 +64,7 @@ class FeaturesConfig(BaseModel):
     drawdown_window: int = 252
     rel_strength_window: int = 63
     macro_release_lag_days: dict[str, int] = Field(default_factory=dict)
+    include_macro: bool = True  # macro is constant per-date -> useless for x-sectional ranking
 
 
 class TargetConfig(BaseModel):

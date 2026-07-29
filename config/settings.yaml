@@ -19,8 +19,10 @@ horizons:
   fwd_3m: 63
 
 # Primary target the model optimises.
+# fwd_3m chosen after a feature-IC scan: cross-sectional signal (momentum/trend/
+# vol factors) is ~2x stronger at 3 months than at 1 month.
 target:
-  horizon: fwd_1m             # which horizon to model
+  horizon: fwd_3m             # which horizon to model
   kind: excess_vs_benchmark   # excess return over the benchmark (SPY)
 
 features:
@@ -31,6 +33,7 @@ features:
   macd: { fast: 12, slow: 26, signal: 9 }
   drawdown_window: 252
   rel_strength_window: 63     # relative strength vs benchmark
+  include_macro: false        # macro is constant per-date -> no cross-sectional value
   macro_release_lag_days:     # conservative publication lag per FRED series (Decision B)
     DGS10: 1
     DGS2: 1
@@ -66,7 +69,7 @@ model:
 backtest:
   rebalance: monthly          # rebalance frequency
   train_min_days: 504         # ~2y minimum before first prediction
-  embargo_days: 21            # >= label horizon; purge+embargo (Decision D)
+  embargo_days: 63            # >= label horizon (now 3m); purge+embargo (Decision D)
   top_bucket_only: true       # equity curve = equal-weight top bucket long-only
   retrain_every_months: 3     # predict monthly, retrain quarterly (walk-forward)
 

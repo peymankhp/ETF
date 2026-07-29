@@ -65,10 +65,16 @@ def run_walk_forward(
     horizon_days = config.horizons[target_name]
     gap = horizon_days + config.backtest.embargo_days
 
+    # The model predicts the target-horizon excess (TARGET_COL), but the strategy
+    # rebalances monthly, so the *realised* P&L per period is the 1-month holding
+    # return — kept separate so the equity curve stays correct when the prediction
+    # horizon differs from the rebalance interval.
+    holding_col = "fwd_1m" if "fwd_1m" in config.horizons else target_name
+
     didx = pd.DatetimeIndex(np.sort(dataset[Cols.DATE].unique()))
     rebal_dates = _monthly_rebalance_dates(didx)
 
-    keep_cols = [Cols.DATE, Cols.TICKER, Cols.ADJ_CLOSE, target_name, TARGET_COL]
+    keep_cols = [Cols.DATE, Cols.TICKER, Cols.ADJ_CLOSE, holding_col, TARGET_COL]
     results: list[pd.DataFrame] = []
 
     # Predict every rebalance date, but retrain only every ``retrain_every_months``
@@ -102,7 +108,7 @@ def run_walk_forward(
         res = test_df[keep_cols].copy()
         res[Cols.SCORE] = preds[Cols.SCORE].to_numpy()
         res[Cols.PROB_OUTPERFORM] = preds[Cols.PROB_OUTPERFORM].to_numpy()
-        res = res.rename(columns={target_name: REALIZED_FWD})
+        res = res.rename(columns={holding_col: REALIZED_FWD})
         results.append(res)
 
     if not results:
