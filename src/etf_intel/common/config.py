@@ -91,6 +91,15 @@ class BacktestConfig(BaseModel):
     retrain_every_months: int = 3  # retrain cadence (predict monthly, retrain quarterly)
 
 
+class PortfolioConfig(BaseModel):
+    """Portfolio construction for the backtest's long book."""
+
+    scheme: str = "equal"  # equal | inverse_vol
+    max_weight: float = 0.15  # cap per position (after which weight is redistributed)
+    cost_bps: float = 10.0  # round-trip transaction cost per unit of turnover (bps)
+    vol_lookback: int = 63  # trailing days used to estimate vol / covariance
+
+
 class RatingsConfig(BaseModel):
     """Cross-sectional bucket fractions, ordered best to worst (must sum to 1)."""
 
@@ -132,6 +141,7 @@ class AppConfig(BaseModel):
     macro_series: dict[str, str] = Field(default_factory=dict)
     model: ModelConfig = Field(default_factory=ModelConfig)
     backtest: BacktestConfig = Field(default_factory=BacktestConfig)
+    portfolio: PortfolioConfig = Field(default_factory=PortfolioConfig)
     ratings: RatingsConfig = Field(default_factory=RatingsConfig)
 
     def data_root(self, settings: Settings | None = None) -> Path:

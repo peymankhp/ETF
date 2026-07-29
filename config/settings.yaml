@@ -70,8 +70,17 @@ backtest:
   rebalance: monthly          # rebalance frequency
   train_min_days: 504         # ~2y minimum before first prediction
   embargo_days: 63            # >= label horizon (now 3m); purge+embargo (Decision D)
-  top_bucket_only: true       # equity curve = equal-weight top bucket long-only
+  top_bucket_only: true       # equity curve = top bucket long-only
   retrain_every_months: 3     # predict monthly, retrain quarterly (walk-forward)
+
+# Portfolio construction for the long book (v1.4).
+# scheme=equal chosen empirically: this signal rewards high volatility, so
+# inverse_vol/hrp (which tilt toward low vol) underperform equal-weight here.
+portfolio:
+  scheme: equal               # equal | inverse_vol
+  max_weight: 0.15            # cap per position; excess redistributed
+  cost_bps: 10                # round-trip transaction cost per unit turnover (bps)
+  vol_lookback: 63            # trailing days for vol / covariance estimation
 
 # Cross-sectional rating buckets, from best predicted score to worst.
 # Fractions must sum to 1.0. Ordered best -> worst.
