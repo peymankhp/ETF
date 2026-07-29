@@ -8,8 +8,9 @@ data:
   duckdb_file: etf_intel.duckdb
   start_date: "2010-01-01"    # ingestion history start
   # end_date left null -> "today" at ingest time (recorded in snapshot metadata)
+  min_history_days: 252       # drop tickers with < ~1y of history at ingest
 
-universe_file: ./config/universe.yaml
+universe_file: ./config/universe_v1.yaml   # v1: ~115 ETFs (was universe.yaml, 20)
 
 # Forward-return label horizons in trading days (~21 td/month).
 horizons:

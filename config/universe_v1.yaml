@@ -1,0 +1,129 @@
+# v1 universe: ~115 liquid, non-leveraged US-listed ETFs across asset classes.
+# NOTE (survivorship bias): this is *today's* list of surviving ETFs. Delisted
+# funds are excluded, which flatters historical backtests. A true point-in-time
+# universe (with listing/delisting dates) is a v3 item. Newer ETFs simply have
+# shorter history here; the ingest history filter drops any with too few days.
+benchmark: SPY
+
+tickers:
+  # --- Broad US equity ---
+  - SPY
+  - IVV
+  - VOO
+  - VTI
+  - QQQ
+  - DIA
+  - IWM
+  - IWB
+  - IJH
+  - IJR
+  - MDY
+  - VB
+  - VO
+  - VV
+  - RSP
+  - SCHB
+  - ITOT
+  - SCHX
+  - SPLG
+  # --- Style / factor ---
+  - IWF
+  - IWD
+  - VUG
+  - VTV
+  - MTUM
+  - QUAL
+  - USMV
+  - VYM
+  - VIG
+  - SCHD
+  - SDY
+  - DVY
+  - NOBL
+  - IWN
+  - IWO
+  - VBR
+  # --- Sectors / industries ---
+  - XLK
+  - XLF
+  - XLE
+  - XLV
+  - XLI
+  - XLY
+  - XLP
+  - XLU
+  - XLB
+  - XLRE
+  - XLC
+  - VGT
+  - VHT
+  - SMH
+  - SOXX
+  - IBB
+  - XBI
+  - KRE
+  - XOP
+  - XME
+  - ITB
+  - TAN
+  - ICLN
+  - VNQ
+  - IYR
+  - SCHH
+  # --- International ---
+  - EFA
+  - IEFA
+  - VEA
+  - EEM
+  - IEMG
+  - VWO
+  - VXUS
+  - VEU
+  - ACWI
+  - EWJ
+  - EWZ
+  - EWG
+  - EWU
+  - MCHI
+  - FXI
+  - INDA
+  - EWY
+  - EWT
+  - EWC
+  - EWA
+  - VGK
+  - VPL
+  - EZU
+  # --- Fixed income ---
+  - AGG
+  - BND
+  - BNDX
+  - LQD
+  - HYG
+  - JNK
+  - TLT
+  - IEF
+  - SHY
+  - IEI
+  - GOVT
+  - TIP
+  - MUB
+  - VCIT
+  - VCSH
+  - BSV
+  - MBB
+  - EMB
+  - SHV
+  - BIL
+  - VGSH
+  - VGIT
+  - VGLT
+  # --- Commodities / metals ---
+  - GLD
+  - IAU
+  - SLV
+  - PDBC
+  - DBC
+  - GDX
+  - GDXJ
+  - USO

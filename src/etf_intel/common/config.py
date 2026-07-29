@@ -42,6 +42,7 @@ class DataConfig(BaseModel):
     duckdb_file: str = "etf_intel.duckdb"
     start_date: str = "2010-01-01"
     end_date: str | None = None
+    min_history_days: int = 252  # drop tickers with fewer than this many bars at ingest
 
 
 class MacdConfig(BaseModel):

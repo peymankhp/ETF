@@ -27,12 +27,32 @@ def main() -> None:
 
     logger.info("Ingesting %d tickers from %s", len(universe.tickers), settings.market_source)
     market = get_market_provider(settings, config.seed).fetch(universe.tickers, start, end)
+
+    # Drop tickers with too little history (keep the benchmark regardless).
+    min_days = config.data.min_history_days
+    counts = market.groupby("ticker").size()
+    keep = set(counts[counts >= min_days].index) | {universe.benchmark}
+    dropped = sorted(set(market["ticker"].unique()) - keep)
+    if dropped:
+        logger.warning("Dropping %d tickers with < %d bars: %s", len(dropped), min_days, dropped)
+        market = market[market["ticker"].isin(keep)].reset_index(drop=True)
+    kept_tickers = sorted(market["ticker"].unique())
+
     store.write_snapshot(
         market,
         Paths.MARKET,
-        {"source": settings.market_source, "tickers": universe.tickers, "start": start, "end": end},
+        {
+            "source": settings.market_source,
+            "tickers": kept_tickers,
+            "n_requested": len(universe.tickers),
+            "n_dropped_short_history": len(dropped),
+            "start": start,
+            "end": end,
+        },
     )
-    logger.info("Market snapshot: %d rows -> %s", len(market), Paths.MARKET)
+    logger.info(
+        "Market snapshot: %d rows, %d tickers -> %s", len(market), len(kept_tickers), Paths.MARKET
+    )
 
     series = list(config.macro_series.keys())
     logger.info("Ingesting %d macro series from %s", len(series), settings.macro_source)
