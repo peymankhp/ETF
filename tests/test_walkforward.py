@@ -52,7 +52,13 @@ def test_compute_backtest_produces_equity(
     fcols = feature_columns(features)
     preds = run_walk_forward(features, fcols, universe, fast_config, labels=labels)
 
-    metrics, equity = compute_backtest(preds, universe, fast_config)
+    panel = (
+        features.pivot(index=Cols.DATE, columns=Cols.TICKER, values=Cols.ADJ_CLOSE)
+        .sort_index()
+        .pct_change(fill_method=None)
+    )
+    metrics, equity = compute_backtest(preds, universe, fast_config, panel)
     assert metrics["n_periods"] >= 1
+    assert metrics["scheme"] == fast_config.portfolio.scheme
     assert {"strategy_equity", "benchmark_equity"}.issubset(equity.columns)
     assert (equity["strategy_equity"] > 0).all()

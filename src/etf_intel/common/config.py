@@ -42,6 +42,7 @@ class DataConfig(BaseModel):
     duckdb_file: str = "etf_intel.duckdb"
     start_date: str = "2010-01-01"
     end_date: str | None = None
+    min_history_days: int = 252  # drop tickers with fewer than this many bars at ingest
 
 
 class MacdConfig(BaseModel):
@@ -63,6 +64,7 @@ class FeaturesConfig(BaseModel):
     drawdown_window: int = 252
     rel_strength_window: int = 63
     macro_release_lag_days: dict[str, int] = Field(default_factory=dict)
+    include_macro: bool = True  # macro is constant per-date -> useless for x-sectional ranking
 
 
 class TargetConfig(BaseModel):
@@ -87,6 +89,15 @@ class BacktestConfig(BaseModel):
     embargo_days: int = 21
     top_bucket_only: bool = True
     retrain_every_months: int = 3  # retrain cadence (predict monthly, retrain quarterly)
+
+
+class PortfolioConfig(BaseModel):
+    """Portfolio construction for the backtest's long book."""
+
+    scheme: str = "equal"  # equal | inverse_vol
+    max_weight: float = 0.15  # cap per position (after which weight is redistributed)
+    cost_bps: float = 10.0  # round-trip transaction cost per unit of turnover (bps)
+    vol_lookback: int = 63  # trailing days used to estimate vol / covariance
 
 
 class RatingsConfig(BaseModel):
@@ -130,6 +141,7 @@ class AppConfig(BaseModel):
     macro_series: dict[str, str] = Field(default_factory=dict)
     model: ModelConfig = Field(default_factory=ModelConfig)
     backtest: BacktestConfig = Field(default_factory=BacktestConfig)
+    portfolio: PortfolioConfig = Field(default_factory=PortfolioConfig)
     ratings: RatingsConfig = Field(default_factory=RatingsConfig)
 
     def data_root(self, settings: Settings | None = None) -> Path:

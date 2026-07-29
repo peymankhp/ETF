@@ -33,7 +33,17 @@ def main() -> None:
     fcols = feature_columns(features)
     logger.info("Running walk-forward backtest (%d features)", len(fcols))
     predictions = run_walk_forward(features, fcols, universe, config, labels=labels)
-    metrics, equity = compute_backtest(predictions, universe, config)
+
+    # Wide daily-returns panel (from the point-in-time total-return index) for
+    # risk-aware position weighting in the backtest.
+    from etf_intel.common.types import Cols
+
+    returns_panel = (
+        features.pivot(index=Cols.DATE, columns=Cols.TICKER, values=Cols.ADJ_CLOSE)
+        .sort_index()
+        .pct_change(fill_method=None)
+    )
+    metrics, equity = compute_backtest(predictions, universe, config, returns_panel)
 
     store.write_parquet(predictions, Paths.PREDICTIONS)
     store.write_json(metrics, Paths.METRICS)
@@ -45,11 +55,14 @@ def main() -> None:
 
     strat = metrics.get("strategy", {})
     logger.info(
-        "Backtest: %d periods | strat CAGR=%.2f%% Sharpe=%.2f MaxDD=%.2f%% | excess hit=%.1f%%",
+        "Backtest[%s]: %d periods | CAGR=%.2f%% Sharpe=%.2f MaxDD=%.2f%% | "
+        "turnover=%.2f excess hit=%.1f%%",
+        metrics.get("scheme", "?"),
         metrics.get("n_periods", 0),
         100 * strat.get("cagr", float("nan")),
         strat.get("sharpe", float("nan")),
         100 * strat.get("max_dd", float("nan")),
+        metrics.get("avg_turnover", float("nan")),
         100 * metrics.get("excess_hit_rate", float("nan")),
     )
 

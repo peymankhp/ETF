@@ -8,8 +8,9 @@ data:
   duckdb_file: etf_intel.duckdb
   start_date: "2010-01-01"    # ingestion history start
   # end_date left null -> "today" at ingest time (recorded in snapshot metadata)
+  min_history_days: 252       # drop tickers with < ~1y of history at ingest
 
-universe_file: ./config/universe.yaml
+universe_file: ./config/universe_v1.yaml   # v1: ~115 ETFs (was universe.yaml, 20)
 
 # Forward-return label horizons in trading days (~21 td/month).
 horizons:
@@ -18,8 +19,10 @@ horizons:
   fwd_3m: 63
 
 # Primary target the model optimises.
+# fwd_3m chosen after a feature-IC scan: cross-sectional signal (momentum/trend/
+# vol factors) is ~2x stronger at 3 months than at 1 month.
 target:
-  horizon: fwd_1m             # which horizon to model
+  horizon: fwd_3m             # which horizon to model
   kind: excess_vs_benchmark   # excess return over the benchmark (SPY)
 
 features:
@@ -30,6 +33,7 @@ features:
   macd: { fast: 12, slow: 26, signal: 9 }
   drawdown_window: 252
   rel_strength_window: 63     # relative strength vs benchmark
+  include_macro: false        # macro is constant per-date -> no cross-sectional value
   macro_release_lag_days:     # conservative publication lag per FRED series (Decision B)
     DGS10: 1
     DGS2: 1
@@ -63,11 +67,22 @@ model:
     verbose: -1
 
 backtest:
-  rebalance: monthly          # rebalance frequency
+  # Empirically monthly beats quarterly NET (14.1% vs 12.5% CAGR): monthly signal
+  # refresh adds ~2.6% gross alpha, more than the ~1%/yr extra turnover cost.
+  rebalance: monthly          # monthly | quarterly
   train_min_days: 504         # ~2y minimum before first prediction
-  embargo_days: 21            # >= label horizon; purge+embargo (Decision D)
-  top_bucket_only: true       # equity curve = equal-weight top bucket long-only
+  embargo_days: 63            # >= label horizon (now 3m); purge+embargo (Decision D)
+  top_bucket_only: true       # equity curve = top bucket long-only
   retrain_every_months: 3     # predict monthly, retrain quarterly (walk-forward)
+
+# Portfolio construction for the long book (v1.4).
+# scheme=equal chosen empirically: this signal rewards high volatility, so
+# inverse_vol/hrp (which tilt toward low vol) underperform equal-weight here.
+portfolio:
+  scheme: equal               # equal | inverse_vol
+  max_weight: 0.15            # cap per position; excess redistributed
+  cost_bps: 10                # round-trip transaction cost per unit turnover (bps)
+  vol_lookback: 63            # trailing days for vol / covariance estimation
 
 # Cross-sectional rating buckets, from best predicted score to worst.
 # Fractions must sum to 1.0. Ordered best -> worst.

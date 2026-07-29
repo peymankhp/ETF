@@ -72,15 +72,18 @@ def build_features(
     if "ret_21" in feat.columns:
         feat["xs_mom_rank"] = cross_sectional_rank(feat, "ret_21")
 
-    # Macro (release-lagged), broadcast across tickers by date.
-    macro_feat = build_macro_features(
-        macro_df if macro_df is not None else pd.DataFrame(),
-        feat[Cols.DATE],
-        fcfg,
-        config.macro_series,
-    )
-    if macro_feat.shape[1] > 1:  # more than just the date column
-        feat = feat.merge(macro_feat, on=Cols.DATE, how="left")
+    # Macro (release-lagged), broadcast across tickers by date. Macro is constant
+    # across tickers on a given date, so it adds nothing to cross-sectional ranking;
+    # include it only when explicitly enabled (e.g. for a future market-timing model).
+    if fcfg.include_macro:
+        macro_feat = build_macro_features(
+            macro_df if macro_df is not None else pd.DataFrame(),
+            feat[Cols.DATE],
+            fcfg,
+            config.macro_series,
+        )
+        if macro_feat.shape[1] > 1:  # more than just the date column
+            feat = feat.merge(macro_feat, on=Cols.DATE, how="left")
 
     feat = feat.sort_values([Cols.DATE, Cols.TICKER]).reset_index(drop=True)
     if "ret_21" in feat.columns:

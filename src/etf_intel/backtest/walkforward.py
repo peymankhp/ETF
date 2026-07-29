@@ -27,9 +27,15 @@ REALIZED_FWD = "realized_fwd"
 MIN_TRAIN_ROWS = 100
 
 
-def _monthly_rebalance_dates(dates: pd.DatetimeIndex) -> list[pd.Timestamp]:
-    """Return the last available trading date of each calendar month."""
+# Which forward-return column represents one holding period, per rebalance freq.
+HOLDING_BY_REBALANCE = {"monthly": "fwd_1m", "quarterly": "fwd_3m"}
+
+
+def _rebalance_dates(dates: pd.DatetimeIndex, rebalance: str) -> list[pd.Timestamp]:
+    """Return the last available trading date of each rebalance period."""
     s = pd.Series(dates, index=dates)
+    if rebalance == "quarterly":
+        return list(s.groupby([dates.year, dates.quarter]).max())
     return list(s.groupby([dates.year, dates.month]).max())
 
 
@@ -65,18 +71,27 @@ def run_walk_forward(
     horizon_days = config.horizons[target_name]
     gap = horizon_days + config.backtest.embargo_days
 
-    didx = pd.DatetimeIndex(np.sort(dataset[Cols.DATE].unique()))
-    rebal_dates = _monthly_rebalance_dates(didx)
+    # The model predicts the target-horizon excess (TARGET_COL), but the realised
+    # P&L per period is the holding-period return for the rebalance interval
+    # (1m for monthly, 3m for quarterly) — kept separate so the equity curve stays
+    # correct when the prediction horizon differs from the rebalance interval.
+    holding_col = HOLDING_BY_REBALANCE.get(config.backtest.rebalance, "fwd_1m")
+    if holding_col not in config.horizons:
+        holding_col = target_name
 
-    keep_cols = [Cols.DATE, Cols.TICKER, Cols.ADJ_CLOSE, target_name, TARGET_COL]
+    didx = pd.DatetimeIndex(np.sort(dataset[Cols.DATE].unique()))
+    rebal_dates = _rebalance_dates(didx, config.backtest.rebalance)
+
+    keep_cols = [Cols.DATE, Cols.TICKER, Cols.ADJ_CLOSE, holding_col, TARGET_COL]
     results: list[pd.DataFrame] = []
 
     # Predict every rebalance date, but retrain only every ``retrain_every_months``
-    # to keep the walk-forward tractable. A reused model was still trained purely on
-    # data before its cutoff, so this introduces no lookahead — only mild staleness.
-    retrain_every = max(1, config.backtest.retrain_every_months)
+    # (time-based, so it's correct at any rebalance frequency) to keep the walk-
+    # forward tractable. A reused model was still trained purely on data before its
+    # cutoff, so this introduces no lookahead — only mild staleness.
+    retrain_every_days = max(1, config.backtest.retrain_every_months) * 30
     model = None
-    folds_since_retrain = 0
+    last_retrain: pd.Timestamp | None = None
 
     for t in rebal_dates:
         i = int(didx.get_loc(t))
@@ -89,11 +104,9 @@ def run_walk_forward(
         if len(train_df) < MIN_TRAIN_ROWS:
             continue
 
-        if model is None or folds_since_retrain >= retrain_every:
+        if model is None or (t - last_retrain).days >= retrain_every_days:
             model = train_model(train_df, feature_cols, config, calibrate=False)
-            folds_since_retrain = 0
-        else:
-            folds_since_retrain += 1
+            last_retrain = t
 
         assert model is not None  # set on the first eligible fold above
         test_df = dataset[dataset[Cols.DATE] == t]
@@ -102,7 +115,7 @@ def run_walk_forward(
         res = test_df[keep_cols].copy()
         res[Cols.SCORE] = preds[Cols.SCORE].to_numpy()
         res[Cols.PROB_OUTPERFORM] = preds[Cols.PROB_OUTPERFORM].to_numpy()
-        res = res.rename(columns={target_name: REALIZED_FWD})
+        res = res.rename(columns={holding_col: REALIZED_FWD})
         results.append(res)
 
     if not results:
