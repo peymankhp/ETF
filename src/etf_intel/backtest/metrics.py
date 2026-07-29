@@ -24,6 +24,7 @@ from etf_intel.models.metrics import (
 from etf_intel.portfolio.construction import compute_weights
 
 PERIODS_PER_YEAR = 12  # monthly rebalance
+PERIODS_PER_YEAR_BY_REBALANCE = {"monthly": 12, "quarterly": 4}
 
 
 def _skill_metrics(predictions: pd.DataFrame) -> dict[str, float]:
@@ -179,9 +180,16 @@ def compute_backtest(
         equity["strategy_equity"] = (1.0 + equity["strategy_return"]).cumprod()
         equity["benchmark_equity"] = (1.0 + equity["benchmark_return"]).cumprod()
 
-    strat = perf_stats(equity["strategy_return"]) if not equity.empty else perf_stats(pd.Series([]))
+    ppy = PERIODS_PER_YEAR_BY_REBALANCE.get(config.backtest.rebalance, PERIODS_PER_YEAR)
+    strat = (
+        perf_stats(equity["strategy_return"], ppy)
+        if not equity.empty
+        else perf_stats(pd.Series([]))
+    )
     bench = (
-        perf_stats(equity["benchmark_return"]) if not equity.empty else perf_stats(pd.Series([]))
+        perf_stats(equity["benchmark_return"], ppy)
+        if not equity.empty
+        else perf_stats(pd.Series([]))
     )
     excess = (
         equity["strategy_return"] - equity["benchmark_return"]
@@ -190,6 +198,7 @@ def compute_backtest(
     )
     metrics: dict[str, Any] = {
         "n_periods": int(len(equity)),
+        "rebalance": config.backtest.rebalance,
         "scheme": pcfg.scheme,
         "avg_turnover": float(np.mean(turnovers)) if turnovers else float("nan"),
         "cost_bps": pcfg.cost_bps,

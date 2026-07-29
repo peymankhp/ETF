@@ -67,7 +67,9 @@ model:
     verbose: -1
 
 backtest:
-  rebalance: monthly          # rebalance frequency
+  # Empirically monthly beats quarterly NET (14.1% vs 12.5% CAGR): monthly signal
+  # refresh adds ~2.6% gross alpha, more than the ~1%/yr extra turnover cost.
+  rebalance: monthly          # monthly | quarterly
   train_min_days: 504         # ~2y minimum before first prediction
   embargo_days: 63            # >= label horizon (now 3m); purge+embargo (Decision D)
   top_bucket_only: true       # equity curve = top bucket long-only
