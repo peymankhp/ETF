@@ -54,8 +54,10 @@ def train_model(
     Returns:
         A :class:`TrainedModel`.
     """
-    from lightgbm import LGBMClassifier, LGBMRegressor
+    from lightgbm import LGBMClassifier
     from sklearn.calibration import CalibratedClassifierCV
+
+    from etf_intel.models.ensemble import build_regressor
 
     seed = config.seed if seed is None else seed
     params: dict[str, Any] = dict(config.model.params)
@@ -65,7 +67,7 @@ def train_model(
     x = fit_df[feature_cols]
     y = fit_df[TARGET_COL]
 
-    regressor = LGBMRegressor(**params)
+    regressor = build_regressor(config.model.kind, params, seed)
     regressor.fit(x, y)
 
     classifier: Any | None = None

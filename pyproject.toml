@@ -102,6 +102,7 @@ module = [
     "pandas",
     "pandas.*",
     "lightgbm.*",
+    "xgboost.*",
     "shap.*",
     "yfinance.*",
     "fredapi.*",

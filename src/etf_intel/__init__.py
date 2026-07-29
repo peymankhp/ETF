@@ -13,7 +13,8 @@ import sys as _sys
 # an access violation inside LGBM_DatasetSetField. Pre-importing lightgbm here (at
 # package import, before any numpy usage) makes the whole pipeline safe on Windows.
 if _sys.platform == "win32":  # pragma: no cover - platform-specific
-    with contextlib.suppress(Exception):  # lightgbm optional for config-only usage
+    with contextlib.suppress(Exception):  # gradient-boosting libs optional
         import lightgbm as _lightgbm  # noqa: F401
+        import xgboost as _xgboost  # noqa: F401
 
 __version__ = "0.1.0"

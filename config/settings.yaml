@@ -51,7 +51,7 @@ macro_series:                 # FRED series ids -> friendly names
   FEDFUNDS: fed_funds_rate
 
 model:
-  kind: lightgbm
+  kind: ensemble              # lightgbm | xgboost | ensemble (LightGBM + XGBoost avg)
   params:
     objective: regression
     n_estimators: 300
