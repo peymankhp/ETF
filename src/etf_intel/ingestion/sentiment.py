@@ -120,19 +120,25 @@ class LexiconSentimentScorer(SentimentScorer):
 class FinBERTSentimentScorer(SentimentScorer):
     """FinBERT sentiment scorer (drop-in upgrade from the lexicon).
 
-    Requires the heavy ML stack, which is intentionally NOT a project dependency::
+    Requires the heavy ML stack, which is an optional extra (kept out of the core
+    install and CI)::
 
-        uv add torch transformers
+        uv sync --extra finbert
 
     The model is loaded lazily on first construction so importing this module stays
     cheap. Returns +score for positive, -score for negative, 0 for neutral.
     """
 
     def __init__(self, model_name: str = "ProsusAI/finbert"):
-        """Load the FinBERT sentiment pipeline (lazy transformers import)."""
-        from transformers import pipeline
+        """Load the FinBERT sentiment pipeline (dynamic transformers import)."""
+        import importlib
 
-        self._pipe = pipeline("sentiment-analysis", model=model_name, truncation=True)
+        # Dynamic import: transformers is optional and heavily typed; loading it via
+        # importlib keeps this module type-checkable whether or not it is installed.
+        transformers = importlib.import_module("transformers")
+        self._pipe: Any = transformers.pipeline(
+            "sentiment-analysis", model=model_name, truncation=True
+        )
 
     def score(self, text: str) -> float:
         """Score one text with FinBERT, mapping label+confidence to ``[-1, 1]``."""

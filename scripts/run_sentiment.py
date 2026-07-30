@@ -5,7 +5,9 @@ table for the current buy-side names. This is a LIVE overlay only — it is not 
 of the backtested model (free historical news makes sentiment un-backtestable).
 
 Usage:
-    python scripts/run_sentiment.py [--top N]
+    python scripts/run_sentiment.py [--top N] [--model lexicon|finbert]
+
+FinBERT requires the optional heavy stack:  uv sync --extra finbert
 """
 
 from __future__ import annotations
@@ -16,15 +18,28 @@ from _common import load_context
 from etf_intel.common.logging import get_logger
 from etf_intel.common.types import Cols
 from etf_intel.datastore import Paths
-from etf_intel.ingestion.sentiment import NewsSentimentProvider
+from etf_intel.ingestion.sentiment import (
+    FinBERTSentimentScorer,
+    LexiconSentimentScorer,
+    NewsSentimentProvider,
+    SentimentScorer,
+)
 
 logger = get_logger("run_sentiment")
+
+
+def _make_scorer(model: str) -> SentimentScorer:
+    if model == "finbert":
+        logger.info("Loading FinBERT (first run downloads the model)...")
+        return FinBERTSentimentScorer()
+    return LexiconSentimentScorer()
 
 
 def main() -> None:
     """Score current headlines for the top-ranked names and save the overlay."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--top", type=int, default=15, help="number of top-ranked names to score")
+    ap.add_argument("--model", choices=["lexicon", "finbert"], default="lexicon")
     args = ap.parse_args()
 
     _config, _settings, _universe, store = load_context()
@@ -34,9 +49,9 @@ def main() -> None:
 
     ranking = store.read_parquet(Paths.LATEST_RANKING)
     tickers = ranking.sort_values(Cols.RANK)[Cols.TICKER].head(args.top).tolist()
-    logger.info("Fetching live headlines for %d names", len(tickers))
+    logger.info("Fetching live headlines for %d names (model=%s)", len(tickers), args.model)
 
-    scores = NewsSentimentProvider().fetch(tickers)
+    scores = NewsSentimentProvider(scorer=_make_scorer(args.model)).fetch(tickers)
     scores = scores.sort_values("sentiment", ascending=False)
     store.write_parquet(scores, "reports/live_sentiment.parquet")
 
