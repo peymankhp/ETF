@@ -93,6 +93,17 @@ uv run mlflow ui --backend-store-uri data/mlruns
   0 7 * * 1 cd /path/to/etf-intel && uv run python scripts/run_pipeline.py
   ```
 
+### Live news sentiment (optional overlay)
+
+A live sentiment overlay on the current top names (not part of the backtested
+model — free historical news makes sentiment un-backtestable):
+
+```bash
+uv run python scripts/run_sentiment.py                     # fast lexicon scorer
+uv sync --extra finbert                                    # one-time: torch + transformers
+uv run python scripts/run_sentiment.py --model finbert     # FinBERT (finance-tuned)
+```
+
 ### Dashboard & API
 
 ```bash

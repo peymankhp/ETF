@@ -46,6 +46,10 @@ dev = [
     "import-linter~=2.0",
     "types-PyYAML~=6.0",
 ]
+finbert = [
+    "torch>=2.13.0",
+    "transformers>=5.14.1",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -108,7 +112,6 @@ module = [
     "fredapi.*",
     "sklearn.*",
     "mlflow.*",
-    "transformers.*",
     "duckdb.*",
     "matplotlib.*",
     "streamlit.*",
