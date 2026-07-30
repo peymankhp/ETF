@@ -63,6 +63,7 @@ class FeaturesConfig(BaseModel):
     macd: MacdConfig = Field(default_factory=MacdConfig)
     drawdown_window: int = 252
     rel_strength_window: int = 63
+    yield_window: int = 252  # trailing window for the dividend-yield feature
     macro_release_lag_days: dict[str, int] = Field(default_factory=dict)
     include_macro: bool = True  # macro is constant per-date -> useless for x-sectional ranking
 
@@ -98,6 +99,9 @@ class PortfolioConfig(BaseModel):
     max_weight: float = 0.15  # cap per position (after which weight is redistributed)
     cost_bps: float = 10.0  # round-trip transaction cost per unit of turnover (bps)
     vol_lookback: int = 63  # trailing days used to estimate vol / covariance
+    no_trade_bands: bool = False  # hysteresis: hold names until they leave a wider band
+    entry_top_frac: float = 0.10  # buy names ranked in the top this fraction
+    exit_top_frac: float = 0.25  # keep held names until they fall below this fraction
 
 
 class RatingsConfig(BaseModel):

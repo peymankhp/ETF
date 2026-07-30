@@ -28,7 +28,12 @@ class ShapExplainer:
         import shap
 
         self.feature_cols = model.feature_cols
-        self.explainer: Any = shap.TreeExplainer(model.regressor)
+        # Unwrap an ensemble to its first (LightGBM) sub-model, which TreeExplainer
+        # understands; the averaging wrapper itself is not a tree model.
+        regressor = model.regressor
+        if hasattr(regressor, "estimators"):
+            regressor = regressor.estimators[0]
+        self.explainer: Any = shap.TreeExplainer(regressor)
 
     def _shap_matrix(self, features: pd.DataFrame) -> np.ndarray:
         x = features[self.feature_cols]

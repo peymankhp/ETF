@@ -131,7 +131,20 @@ def compute_backtest(
     prev_w: pd.Series = pd.Series(dtype=float)
 
     for d, day in predictions.groupby(Cols.DATE):
-        selected = day[day[Cols.RATING] == top_rating]
+        if pcfg.no_trade_bands:
+            # Hysteresis: buy names in the top entry band; keep already-held names
+            # until they fall out of a wider exit band. Cuts turnover without giving
+            # up monthly signal refresh.
+            n = len(day)
+            entry_rank = max(1, int(np.ceil(pcfg.entry_top_frac * n)))
+            exit_rank = max(entry_rank, int(np.ceil(pcfg.exit_top_frac * n)))
+            rank_by_ticker = day.set_index(Cols.TICKER)[Cols.RANK]
+            entries = set(rank_by_ticker.index[rank_by_ticker <= entry_rank])
+            retained = set(prev_w.index) & set(rank_by_ticker.index[rank_by_ticker <= exit_rank])
+            held = entries | retained
+            selected = day[day[Cols.TICKER].isin(held)]
+        else:
+            selected = day[day[Cols.RATING] == top_rating]
         if selected.empty:
             # Degenerate top bucket (e.g. tiny universe where 10% rounds to zero
             # names): fall back to the single best-ranked name so the book is held.
