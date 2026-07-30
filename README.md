@@ -64,6 +64,35 @@ uv run python scripts/run_backtest.py
 uv run python scripts/run_report.py
 ```
 
+### One command + weekly scheduling
+
+Run the whole pipeline (ingest → train → backtest → report) in one step:
+
+```bash
+uv run python scripts/run_pipeline.py            # live data
+uv run python scripts/run_pipeline.py --source synthetic
+```
+
+Every backtest is logged to a local **MLflow** store (`data/mlruns`) — params,
+skill + performance metrics, and artifacts — so experiments are reproducible and
+comparable. Browse them with:
+
+```bash
+uv run mlflow ui --backend-store-uri data/mlruns
+```
+
+**Schedule it weekly** (refreshes the ranking on its own):
+
+- **Windows (Task Scheduler)** — run every Monday 07:00:
+  ```bat
+  schtasks /Create /TN "ETF-Intel weekly" /SC WEEKLY /D MON /ST 07:00 ^
+    /TR "cmd /c cd /d D:\Github\ETF && uv run python scripts/run_pipeline.py"
+  ```
+- **Linux/macOS (cron)** — `crontab -e`, then:
+  ```cron
+  0 7 * * 1 cd /path/to/etf-intel && uv run python scripts/run_pipeline.py
+  ```
+
 ### Dashboard & API
 
 ```bash

@@ -107,6 +107,7 @@ module = [
     "yfinance.*",
     "fredapi.*",
     "sklearn.*",
+    "mlflow.*",
     "duckdb.*",
     "matplotlib.*",
     "streamlit.*",
@@ -137,7 +138,7 @@ root_package = "etf_intel"
 name = "Layered architecture (dependencies point downward only)"
 type = "layers"
 layers = [
-    "etf_intel.reporting | etf_intel.api | etf_intel.dashboard",
+    "etf_intel.reporting | etf_intel.api | etf_intel.dashboard | etf_intel.tracking",
     "etf_intel.explain",
     "etf_intel.backtest",
     "etf_intel.portfolio | etf_intel.models",

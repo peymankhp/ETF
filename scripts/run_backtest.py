@@ -51,7 +51,16 @@ def main() -> None:
 
     from etf_intel.reporting import save_equity_curve
 
-    save_equity_curve(equity, store.path(Paths.EQUITY_CURVE_PNG))
+    png = save_equity_curve(equity, store.path(Paths.EQUITY_CURVE_PNG))
+
+    from etf_intel.tracking import log_backtest_run
+
+    log_backtest_run(
+        config,
+        metrics,
+        store.root / "mlruns",
+        artifacts=[store.path(Paths.METRICS), png],
+    )
 
     strat = metrics.get("strategy", {})
     logger.info(
