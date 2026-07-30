@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     data_dir: str | None = None
     market_source: str = "yfinance"
     macro_source: str = "fred"
+    resend_api_key: str = ""  # Resend email API key (optional, for alert emails)
+    report_recipient: str = ""  # email address to send ranking-change alerts to
 
 
 class DataConfig(BaseModel):

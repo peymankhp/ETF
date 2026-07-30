@@ -81,3 +81,53 @@ class EmailAlertChannel(AlertChannel):
             smtp.login(self.username, self.password)
             smtp.send_message(msg)
         logger.info("Alert emailed to %s", self.recipient)
+
+
+class ResendEmailAlertChannel(AlertChannel):
+    """Sends the alert as an email via the Resend HTTP API (no SMTP password).
+
+    Mirrors the SPAI project's approach: POST to ``api.resend.com`` with a Bearer
+    key. Requires a user-supplied ``RESEND_API_KEY`` and recipient.
+    """
+
+    _URL = "https://api.resend.com/emails"
+
+    def __init__(
+        self,
+        api_key: str,
+        recipient: str,
+        sender: str = "ETF Intel <onboarding@resend.dev>",
+    ):
+        """Initialise with the Resend API key, recipient, and sender identity."""
+        self.api_key = api_key
+        self.recipient = recipient
+        self.sender = sender
+
+    def send(self, subject: str, body: str) -> None:
+        """Send the alert as a simple HTML email via Resend."""
+        import html as _html
+
+        import requests
+
+        html_body = (
+            '<div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;'
+            'color:#222;">'
+            f'<h2 style="color:#1a1a2e;">{_html.escape(subject)}</h2>'
+            f'<pre style="font-family:inherit;font-size:14px;line-height:1.6;'
+            f'white-space:pre-wrap;">{_html.escape(body)}</pre>'
+            '<hr><p style="font-size:11px;color:#999;">ETF Intel — research signals, '
+            "not financial advice.</p></div>"
+        )
+        resp = requests.post(
+            self._URL,
+            json={
+                "from": self.sender,
+                "to": [self.recipient],
+                "subject": subject,
+                "html": html_body,
+            },
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        logger.info("Alert emailed to %s via Resend", self.recipient)

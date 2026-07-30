@@ -14,6 +14,7 @@ from _common import load_context
 from etf_intel.alerting import (
     FileAlertChannel,
     LogAlertChannel,
+    ResendEmailAlertChannel,
     format_alert,
     ranking_changes,
 )
@@ -29,7 +30,7 @@ def main() -> None:
     """Detect ranking changes vs the saved snapshot and deliver an alert."""
     import pandas as pd
 
-    _config, _settings, _universe, store = load_context()
+    _config, settings, _universe, store = load_context()
     if not store.exists(Paths.LATEST_RANKING):
         logger.warning("No ranking found. Run the pipeline first.")
         return
@@ -44,6 +45,11 @@ def main() -> None:
         LogAlertChannel().send("ETF Intel ranking update", body)
         if not changes.is_empty():
             FileAlertChannel(store.path("reports/alerts")).send("ETF Intel ranking update", body)
+            # Email via Resend only when configured and there is something to report.
+            if settings.resend_api_key and settings.report_recipient:
+                ResendEmailAlertChannel(settings.resend_api_key, settings.report_recipient).send(
+                    f"ETF Intel ranking update ({as_of:%Y-%m-%d})", body
+                )
     else:
         logger.info("No previous ranking snapshot; saving baseline (no alert this run).")
 
