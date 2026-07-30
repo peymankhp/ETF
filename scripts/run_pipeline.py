@@ -24,6 +24,7 @@ def main() -> None:
         [sys.executable, str(SCRIPTS / "run_train.py")],
         [sys.executable, str(SCRIPTS / "run_backtest.py")],
         [sys.executable, str(SCRIPTS / "run_report.py")],
+        [sys.executable, str(SCRIPTS / "run_stress.py")],
         [sys.executable, str(SCRIPTS / "run_alerts.py")],
     ]
     for cmd in steps:
