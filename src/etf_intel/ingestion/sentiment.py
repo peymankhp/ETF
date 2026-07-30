@@ -117,6 +117,37 @@ class LexiconSentimentScorer(SentimentScorer):
         return (pos - neg) / (pos + neg)
 
 
+class FinBERTSentimentScorer(SentimentScorer):
+    """FinBERT sentiment scorer (drop-in upgrade from the lexicon).
+
+    Requires the heavy ML stack, which is intentionally NOT a project dependency::
+
+        uv add torch transformers
+
+    The model is loaded lazily on first construction so importing this module stays
+    cheap. Returns +score for positive, -score for negative, 0 for neutral.
+    """
+
+    def __init__(self, model_name: str = "ProsusAI/finbert"):
+        """Load the FinBERT sentiment pipeline (lazy transformers import)."""
+        from transformers import pipeline
+
+        self._pipe = pipeline("sentiment-analysis", model=model_name, truncation=True)
+
+    def score(self, text: str) -> float:
+        """Score one text with FinBERT, mapping label+confidence to ``[-1, 1]``."""
+        if not text.strip():
+            return 0.0
+        result = self._pipe(text[:512])[0]
+        label = str(result["label"]).lower()
+        confidence = float(result["score"])
+        if label == "positive":
+            return confidence
+        if label == "negative":
+            return -confidence
+        return 0.0
+
+
 NewsFetcher = Callable[[str], list[dict[str, Any]]]
 
 

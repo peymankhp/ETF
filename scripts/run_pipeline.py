@@ -24,6 +24,7 @@ def main() -> None:
         [sys.executable, str(SCRIPTS / "run_train.py")],
         [sys.executable, str(SCRIPTS / "run_backtest.py")],
         [sys.executable, str(SCRIPTS / "run_report.py")],
+        [sys.executable, str(SCRIPTS / "run_alerts.py")],
     ]
     for cmd in steps:
         print(f"\n=== {Path(cmd[1]).name} ===", flush=True)
