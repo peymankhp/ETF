@@ -1,0 +1,17 @@
+# Fly.io config for the on-demand signals bot (long-polling — no ports needed).
+# Deploy:  cd bot && fly launch --no-deploy --copy-config --name etf-spai-bot
+#          fly secrets set BOT_TOKEN=... ETF_SUMMARY_URL=... SPAI_SUMMARY_URL=...
+#          fly deploy
+app = "etf-spai-bot"
+primary_region = "arn"
+
+[build]
+  dockerfile = "Dockerfile"
+
+# Long-polling worker: one always-on machine, no public HTTP service.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+[processes]
+  app = "python bot.py"
