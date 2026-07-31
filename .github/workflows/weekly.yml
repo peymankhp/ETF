@@ -34,6 +34,9 @@ jobs:
       ETF_INTEL_REPORT_RECIPIENT: ${{ secrets.ETF_INTEL_REPORT_RECIPIENT }}
       ETF_INTEL_TELEGRAM_BOT_TOKEN: ${{ secrets.ETF_INTEL_TELEGRAM_BOT_TOKEN }}
       ETF_INTEL_TELEGRAM_CHAT_ID: ${{ secrets.ETF_INTEL_TELEGRAM_CHAT_ID }}
+      # Optional: publish a compact summary to a gist for the on-demand bot.
+      GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+      GIST_ID: ${{ secrets.GIST_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,6 +61,23 @@ jobs:
 
       - name: Send weekly digest (email + Telegram)
         run: uv run python scripts/run_digest.py
+
+      - name: Publish summary to gist (for the on-demand bot)
+        if: env.GIST_TOKEN != '' && env.GIST_ID != ''
+        run: |
+          uv run python scripts/build_summary.py
+          uv run python - <<'PY'
+          import json, os, urllib.request
+          content = open("data/reports/summary.json", encoding="utf-8").read()
+          payload = json.dumps({"files": {"summary.json": {"content": content}}}).encode()
+          req = urllib.request.Request(
+              f"https://api.github.com/gists/{os.environ['GIST_ID']}",
+              data=payload, method="PATCH",
+              headers={"Authorization": f"token {os.environ['GIST_TOKEN']}",
+                       "Accept": "application/vnd.github+json"})
+          urllib.request.urlopen(req).read()
+          print("gist updated")
+          PY
 
       - name: Upload reports as artifacts
         if: always()
