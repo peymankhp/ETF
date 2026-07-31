@@ -15,6 +15,7 @@ from etf_intel.alerting import (
     FileAlertChannel,
     LogAlertChannel,
     ResendEmailAlertChannel,
+    TelegramAlertChannel,
     format_alert,
     ranking_changes,
 )
@@ -44,11 +45,17 @@ def main() -> None:
         body = format_alert(changes, as_of)
         LogAlertChannel().send("ETF Intel ranking update", body)
         if not changes.is_empty():
-            FileAlertChannel(store.path("reports/alerts")).send("ETF Intel ranking update", body)
-            # Email via Resend only when configured and there is something to report.
+            subject = f"ETF Intel ranking update ({as_of:%Y-%m-%d})"
+            FileAlertChannel(store.path("reports/alerts")).send(subject, body)
+            # Email via Resend when configured.
             if settings.resend_api_key and settings.report_recipient:
                 ResendEmailAlertChannel(settings.resend_api_key, settings.report_recipient).send(
-                    f"ETF Intel ranking update ({as_of:%Y-%m-%d})", body
+                    subject, body
+                )
+            # Telegram push when configured.
+            if settings.telegram_bot_token and settings.telegram_chat_id:
+                TelegramAlertChannel(settings.telegram_bot_token, settings.telegram_chat_id).send(
+                    subject, body
                 )
     else:
         logger.info("No previous ranking snapshot; saving baseline (no alert this run).")

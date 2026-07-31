@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     macro_source: str = "fred"
     resend_api_key: str = ""  # Resend email API key (optional, for alert emails)
     report_recipient: str = ""  # email address to send ranking-change alerts to
+    telegram_bot_token: str = ""  # Telegram bot token (optional, for push alerts)
+    telegram_chat_id: str = ""  # Telegram chat id to send alerts to
 
 
 class DataConfig(BaseModel):

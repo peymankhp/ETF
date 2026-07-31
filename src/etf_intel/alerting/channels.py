@@ -131,3 +131,31 @@ class ResendEmailAlertChannel(AlertChannel):
         )
         resp.raise_for_status()
         logger.info("Alert emailed to %s via Resend", self.recipient)
+
+
+class TelegramAlertChannel(AlertChannel):
+    """Sends the alert to a Telegram chat via the Bot API.
+
+    Requires a bot token (from @BotFather) and a chat id. Never constructed
+    automatically — the pipeline uses it only when both are set in the environment.
+    """
+
+    _URL = "https://api.telegram.org/bot{token}/sendMessage"
+
+    def __init__(self, bot_token: str, chat_id: str):
+        """Initialise with the bot token and target chat id."""
+        self.bot_token = bot_token
+        self.chat_id = chat_id
+
+    def send(self, subject: str, body: str) -> None:
+        """Send the alert as a Telegram message (plain text, truncated to 4096)."""
+        import requests
+
+        text = f"{subject}\n\n{body}"[:4096]
+        resp = requests.post(
+            self._URL.format(token=self.bot_token),
+            json={"chat_id": self.chat_id, "text": text, "disable_web_page_preview": True},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        logger.info("Alert sent to Telegram chat %s", self.chat_id)

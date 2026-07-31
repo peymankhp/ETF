@@ -16,6 +16,7 @@ from etf_intel.alerting.channels import (
     FileAlertChannel,
     LogAlertChannel,
     ResendEmailAlertChannel,
+    TelegramAlertChannel,
 )
 
 __all__ = [
@@ -25,6 +26,7 @@ __all__ = [
     "LogAlertChannel",
     "RankingChanges",
     "ResendEmailAlertChannel",
+    "TelegramAlertChannel",
     "format_alert",
     "ranking_changes",
 ]
