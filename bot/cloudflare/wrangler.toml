@@ -1,0 +1,10 @@
+# Cloudflare Worker config (only needed for the CLI `wrangler deploy` path;
+# the dashboard copy-paste method needs no config). Set BOT_TOKEN as an
+# encrypted secret: `wrangler secret put BOT_TOKEN`.
+name = "etf-spai-bot"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+[vars]
+ETF_SUMMARY_URL = ""   # raw gist URL of the ETF summary.json
+SPAI_SUMMARY_URL = ""  # raw gist URL of the SPAI summary.json
