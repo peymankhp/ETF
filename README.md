@@ -87,11 +87,15 @@ uv run mlflow ui --backend-store-uri data/mlruns
 
 **Schedule it weekly** (refreshes the ranking on its own):
 
-- **Windows (Task Scheduler)** — run every Monday 07:00:
+- **Windows (Task Scheduler)** — schedule the bundled wrapper `scripts/run_weekly.bat`
+  (it calls the venv's Python by absolute path, so it doesn't depend on PATH / uv /
+  Store aliases, which fail under Task Scheduler). Run once in an **Administrator**
+  Command Prompt:
   ```bat
-  schtasks /Create /TN "ETF-Intel weekly" /SC WEEKLY /D MON /ST 07:00 ^
-    /TR "cmd /c cd /d D:\Github\ETF && uv run python scripts/run_pipeline.py"
+  schtasks /Create /TN "ETF-Intel weekly" /SC WEEKLY /D MON /ST 07:00 /TR "D:\Github\ETF\scripts\run_weekly.bat"
   ```
+  Test it immediately with `schtasks /Run /TN "ETF-Intel weekly"`, then check
+  `data\weekly_run.log`.
 - **Linux/macOS (cron)** — `crontab -e`, then:
   ```cron
   0 7 * * 1 cd /path/to/etf-intel && uv run python scripts/run_pipeline.py
