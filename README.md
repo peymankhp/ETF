@@ -9,9 +9,13 @@ confidence score and a human-readable SHAP explanation.
 > ⚠️ **This is a research and educational tool, not a licensed financial advisor.**
 > Ratings are signals for a human to review, never automated orders.
 
-This repository is the **MVP** (Phase 0/1): 20 liquid US ETFs, a LightGBM baseline, and a
-full pipeline that runs end to end. See [ARCHITECTURE.md](ARCHITECTURE.md) for the design
-and the phased roadmap.
+**Status: MVP + v1 + v2 complete, v3 started.** ~115 ETFs, a LightGBM+XGBoost ensemble,
+risk-aware portfolio construction with transaction costs, MLflow-tracked experiments,
+FinBERT news-sentiment overlay, email alerts, and a stress-tested, point-in-time-correct
+walk-forward backtest. Current best config beats SPY on return **and** drawdown (CAGR ~17%
+vs ~16%, Sharpe ~1.03, MaxDD −18.6%) with an out-of-sample edge (rank-IC ~0.11) that is
+persistent across time. See [ARCHITECTURE.md](ARCHITECTURE.md) for the design, current
+configuration, and the phased roadmap with status.
 
 ## Core principles
 
@@ -133,10 +137,12 @@ docker compose run --rm etf-intel python scripts/run_ingest.py --source syntheti
 ## Repository layout
 
 ```
-config/          settings.yaml + universe.yaml (20 tickers)
-src/etf_intel/   ingestion, datastore, features, labeling, models,
-                 backtest, portfolio, explain, reporting, api, dashboard, common
-scripts/         run_ingest / run_train / run_backtest / run_report
+config/          settings.yaml + universe_v1.yaml (~115 tickers)
+src/etf_intel/   ingestion, datastore, features, labeling, models, backtest,
+                 portfolio, explain, reporting, tracking, alerting, api,
+                 dashboard, common
+scripts/         run_ingest / run_train / run_backtest / run_report / run_stress /
+                 run_alerts / run_sentiment / run_pipeline (one command)
 tests/           unit tests + leakage test + architecture contract test
-data/            (gitignored) versioned parquet snapshots + duckdb
+data/            (gitignored) versioned parquet snapshots, duckdb, mlruns
 ```
