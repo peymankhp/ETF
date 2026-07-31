@@ -1,0 +1,68 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ETF Intel — Weekly ranking + email/Telegram digest (runs in the CLOUD)
+#
+# Runs every Monday 07:00 UTC on GitHub's servers, so your laptop can be OFF.
+# Also runnable on demand: GitHub → Actions → "ETF Intel Weekly" → Run workflow.
+#
+# Setup (one time):
+#   1. Push this repo to GitHub.
+#   2. repo → Settings → Secrets and variables → Actions → add these secrets:
+#        ETF_INTEL_FRED_API_KEY, ETF_INTEL_RESEND_API_KEY, ETF_INTEL_REPORT_RECIPIENT,
+#        ETF_INTEL_TELEGRAM_BOT_TOKEN, ETF_INTEL_TELEGRAM_CHAT_ID
+#   Secrets are encrypted and never appear in the repo.
+# ─────────────────────────────────────────────────────────────────────────────
+name: ETF Intel Weekly
+
+on:
+  schedule:
+    - cron: "0 7 * * 1" # Mondays 07:00 UTC
+  workflow_dispatch: {}
+
+concurrency:
+  group: etf-intel-weekly
+  cancel-in-progress: false
+
+jobs:
+  weekly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ETF_INTEL_MARKET_SOURCE: yfinance
+      ETF_INTEL_MACRO_SOURCE: fred
+      ETF_INTEL_FRED_API_KEY: ${{ secrets.ETF_INTEL_FRED_API_KEY }}
+      ETF_INTEL_RESEND_API_KEY: ${{ secrets.ETF_INTEL_RESEND_API_KEY }}
+      ETF_INTEL_REPORT_RECIPIENT: ${{ secrets.ETF_INTEL_REPORT_RECIPIENT }}
+      ETF_INTEL_TELEGRAM_BOT_TOKEN: ${{ secrets.ETF_INTEL_TELEGRAM_BOT_TOKEN }}
+      ETF_INTEL_TELEGRAM_CHAT_ID: ${{ secrets.ETF_INTEL_TELEGRAM_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Ingest → train → backtest → report → stress
+        run: |
+          uv run python scripts/run_ingest.py
+          uv run python scripts/run_train.py
+          uv run python scripts/run_backtest.py
+          uv run python scripts/run_report.py
+          uv run python scripts/run_stress.py
+
+      - name: Send weekly digest (email + Telegram)
+        run: uv run python scripts/run_digest.py
+
+      - name: Upload reports as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: etf-reports-${{ github.run_number }}
+          path: data/reports/
+          retention-days: 90
