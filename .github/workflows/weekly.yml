@@ -37,6 +37,8 @@ jobs:
       # Optional: publish a compact summary to a gist for the on-demand bot.
       GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
       GIST_ID: ${{ secrets.GIST_ID }}
+      # Cross-repo token to fetch SPAI's latest Gold PDF for the combined report.
+      GH_PAT: ${{ secrets.GH_PAT }}
     steps:
       - uses: actions/checkout@v4
 
@@ -48,8 +50,10 @@ jobs:
       - name: Set up Python 3.11
         run: uv python install 3.11
 
-      - name: Install dependencies
-        run: uv sync
+      - name: Install dependencies (+ report extra for the PDF)
+        run: |
+          uv sync --extra report
+          uv run playwright install --with-deps chromium
 
       - name: Ingest → train → backtest → report → stress
         run: |
@@ -59,8 +63,22 @@ jobs:
           uv run python scripts/run_report.py
           uv run python scripts/run_stress.py
 
-      - name: Send weekly digest (email + Telegram)
-        run: uv run python scripts/run_digest.py
+      - name: Send weekly digest email (Telegram handled by the combined PDF)
+        run: uv run python scripts/run_digest.py --no-telegram
+
+      - name: Download SPAI's latest Gold PDF (from the SPAI repo release)
+        if: env.GH_PAT != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          mkdir -p data/spai
+          gh release download weekly-latest --repo peymankhp/SPAI \
+            --pattern "*.pdf" --dir data/spai --clobber || echo "no SPAI release yet"
+
+      - name: Send combined ETF + Gold PDF to Telegram
+        run: |
+          uv run python scripts/send_combined_pdf.py --spai-pdf data/spai/spai_report.pdf
 
       - name: Publish summary to gist (for the on-demand bot)
         if: env.GIST_TOKEN != '' && env.GIST_ID != ''

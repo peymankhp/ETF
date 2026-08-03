@@ -25,36 +25,41 @@ def _build_body(store: DataStore) -> tuple[str, str]:
 
     ranking = store.read_parquet(Paths.LATEST_RANKING).sort_values(Cols.RANK)
     as_of = pd.Timestamp(ranking[Cols.DATE].max())
-    buys = ranking[ranking[Cols.RATING].isin(["Strong Buy", "Buy"])]
+    strong = ranking.loc[ranking[Cols.RATING] == "Strong Buy", Cols.TICKER].tolist()
+    buy = ranking.loc[ranking[Cols.RATING] == "Buy", Cols.TICKER].tolist()
 
-    lines = [
-        f"ETF Intel — weekly digest ({as_of:%Y-%m-%d})",
-        "",
-        "Automated ETF ranking. Research signals only — not financial advice.",
-        "",
-        "== Buy-side (Strong Buy / Buy) ==",
-    ]
-    for _, r in buys.iterrows():
-        lines.append(f"  #{int(r[Cols.RANK])} {r[Cols.TICKER]} — {r[Cols.RATING]}")
+    # Body only (no title — the subject carries it, avoiding a duplicate line).
+    lines = ["📊 Weekly ETF ranking", ""]
+    if strong:
+        lines.append(f"🟢 Strong Buy ({len(strong)}): {', '.join(strong)}")
+    if buy:
+        lines.append(f"🔵 Buy ({len(buy)}): {', '.join(buy)}")
 
     if store.exists(Paths.METRICS):
         m = store.read_json(Paths.METRICS)
         s, b = m.get("strategy", {}), m.get("benchmark", {})
         lines += [
             "",
-            "== Walk-forward backtest (costs included) ==",
-            f"  Strategy: CAGR {s.get('cagr', float('nan')) * 100:.1f}%  "
-            f"Sharpe {s.get('sharpe', float('nan')):.2f}  "
-            f"MaxDD {s.get('max_dd', float('nan')) * 100:.1f}%",
-            f"  SPY:      CAGR {b.get('cagr', float('nan')) * 100:.1f}%  "
-            f"Sharpe {b.get('sharpe', float('nan')):.2f}",
-            f"  Skill (rank-IC): {m.get('skill', {}).get('mean_xs_rank_ic', float('nan')):+.3f}",
+            "📈 Walk-forward backtest (costs included)",
+            f"   Strategy — CAGR {s.get('cagr', float('nan')) * 100:.1f}%"
+            f" · Sharpe {s.get('sharpe', float('nan')):.2f}"
+            f" · MaxDD {s.get('max_dd', float('nan')) * 100:.1f}%",
+            f"   SPY      — CAGR {b.get('cagr', float('nan')) * 100:.1f}%"
+            f" · Sharpe {b.get('sharpe', float('nan')):.2f}",
+            f"   Skill (rank-IC) {m.get('skill', {}).get('mean_xs_rank_ic', float('nan')):+.3f}",
         ]
+    lines += ["", "Research signals only — not financial advice."]
     return f"ETF Intel — weekly digest ({as_of:%Y-%m-%d})", "\n".join(lines)
 
 
 def main() -> None:
     """Send the weekly digest to every configured channel."""
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--no-telegram", action="store_true", help="email only (skip Telegram)")
+    args = ap.parse_args()
+
     _config, settings, _universe, store = load_context()
     if not store.exists(Paths.LATEST_RANKING):
         logger.warning("No ranking found. Run the pipeline first.")
@@ -67,13 +72,13 @@ def main() -> None:
             subject, body
         )
         sent = True
-    if settings.telegram_bot_token and settings.telegram_chat_id:
+    if not args.no_telegram and settings.telegram_bot_token and settings.telegram_chat_id:
         TelegramAlertChannel(settings.telegram_bot_token, settings.telegram_chat_id).send(
             subject, body
         )
         sent = True
     if not sent:
-        logger.info("No email/Telegram configured; digest not sent:\n%s", body)
+        logger.info("No channel sent; digest:\n%s", body)
 
 
 if __name__ == "__main__":
