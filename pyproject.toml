@@ -38,6 +38,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Rich PDF report for Telegram (headless-browser render + PDF merge).
+report = [
+    "playwright>=1.40",
+    "pypdf>=4.0",
+]
 dev = [
     "pytest~=8.3",
     "pytest-cov~=5.0",
@@ -77,6 +82,7 @@ ignore = [
 "tests/*" = ["D"]          # docstrings not required in tests
 "scripts/*" = ["D"]
 "notebooks/*" = ["D", "E501"]
+"src/etf_intel/reporting/html_report.py" = ["E501"]  # inline HTML templates
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -112,6 +118,8 @@ module = [
     "fredapi.*",
     "sklearn.*",
     "mlflow.*",
+    "playwright.*",
+    "pypdf.*",
     "duckdb.*",
     "matplotlib.*",
     "streamlit.*",

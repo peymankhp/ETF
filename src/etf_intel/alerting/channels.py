@@ -159,3 +159,20 @@ class TelegramAlertChannel(AlertChannel):
         )
         resp.raise_for_status()
         logger.info("Alert sent to Telegram chat %s", self.chat_id)
+
+    def send_document(self, path: str, caption: str = "") -> None:
+        """Send a file (e.g. the report PDF) to the Telegram chat."""
+        import os
+
+        import requests
+
+        url = f"https://api.telegram.org/bot{self.bot_token}/sendDocument"
+        with open(path, "rb") as fh:
+            resp = requests.post(
+                url,
+                data={"chat_id": self.chat_id, "caption": caption[:1024]},
+                files={"document": (os.path.basename(path), fh, "application/pdf")},
+                timeout=60,
+            )
+        resp.raise_for_status()
+        logger.info("Document sent to Telegram chat %s", self.chat_id)
